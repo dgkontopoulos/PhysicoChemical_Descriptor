@@ -1,21 +1,21 @@
-# NAME
+## NAME
 
 __PhysicoChemical\_Descriptor__
 
-# DESCRIPTION
+## DESCRIPTION
 
 A CGI service for calculation of physicochemical properties of a given 
 amino acid sequence.
 
-# USAGE
+## USAGE
 
 http://imgt.org/motifs/properties.pl?sequence="SEQUENCE"
 
-# EXAMPLE
+## EXAMPLE
 
 http://imgt.org/motifs/properties.pl?sequence=RWMDR
 
-# DEPENDENCIES
+## DEPENDENCIES
 
 \-the Perl interpreter, >= 5.10
 
@@ -27,11 +27,11 @@ http://imgt.org/motifs/properties.pl?sequence=RWMDR
 
 \-List::MoreUtils, >= 0.33 (Perl module)
 
-# LIMITATIONS
+## LIMITATIONS
 
 There is a limit of no more than 400 amino acids per sequence.
 
-# AUTHORS
+## AUTHORS
 
 \-Dimitrios - Georgios Kontopoulos <<dgkontopoulos@gmail.com>>
 
@@ -39,7 +39,7 @@ There is a limit of no more than 400 amino acids per sequence.
 
 \-Sophia Kossida <<skossida@bioacademy.gr>>
 
-# LICENSE
+## LICENSE
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as
