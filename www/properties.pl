@@ -129,8 +129,8 @@ elsif ( $sequence =~ /^[A|R|N|D|C|E|Q|G|H|I|L|K|M|F|P|S|T|W|Y|V]+$/i )
 <tr>
 
 <td align=left nowrap valign=middle width="70%">
-<font size="+3" color="#000099"><b>WELCOME
-<font size='+2'><br>to PhysicoChemical Descriptor<sup><small>($VERSION)</small></sup>!</b></font>
+<font size="+3" color="#000099"><b>WELCOME</b></font>
+<font size='+2' color="#000099"><br><b>to PhysicoChemical Descriptor<sup><small>($VERSION)</small></sup>!</b></font>
 </td>
 </font></td>
 
@@ -172,8 +172,8 @@ END_HEADER
 <tr>
 
 <td align=left nowrap valign=middle width="70%">
-<font size="+3" color="#000099"><b>WELCOME
-<font size='+2'><br>to PhysicoChemical Descriptor<sup><small>($VERSION)</small></sup>!</b></font>
+<font size="+3" color="#000099"><b>WELCOME</b></font>
+<font size='+2' color="#000099"><br><b>to PhysicoChemical Descriptor<sup><small>($VERSION)</small></sup>!</b></font>
 </td>
 
 <td align=right valign=top width="30%">
@@ -185,9 +185,9 @@ END_HEADER
 <hr/>
 <font face="Ubuntu Mono, Courier New">Input sequence:<br><b>&nbsp;$input_seq</b>
 </font><br><br>
-<font face="Ubuntu Mono, Courier New">The following tables display calculations of various physicochemical properties
+<font face="Ubuntu Mono, Courier New">The following table displays calculations of various physicochemical properties
 of the input sequence.
-<br>Scroll to the bottom of this page to see an explanation of the codes.</font>
+<br>Clicking on property codes (first column) will show their description.</font>
 <br><br><center>
 ENDHTML
 
@@ -201,18 +201,46 @@ ENDHTML
     # Sort properties alphabetically. #
     @properties = sort { lc $a cmp lc $b } @properties;
 
+    print << "ENDHTML";
+<table border="1" id="properties"><thead><tr><th></th>
+ENDHTML
+
+    my @seq_full = split q{}, uc $sequence;
+    my @sequence = uniq @seq_full;
+    @sequence = sort { $a cmp $b } @sequence;
+
+    # Print the first row. #
+    for ( 0 .. $#sequence )
+    {
+        my $tag = $sequence[$_];
+        my $occurences = grep { /$tag/ } @seq_full;
+
+        # Add the number of occurences for amino acids. #
+        if ( $occurences > 1 )
+        {
+            $tag .= '<sub>' . q{(x} . $occurences . q{)} . '</sub>';
+        }
+
+        print
+"<th bgcolor=FFEEC0 align=center><b><font face='Ubuntu Mono, Courier New'>$tag</font></b></th>\n";
+    }
+    print << "ENDHTML";
+<th bgcolor=FFEEC0 align=center>
+<b><font face='Ubuntu Mono, Courier New'>Average</font></b>
+</th></tr></thead><tfoot></tfoot><tbody>
+ENDHTML
+
     # For each property, compute its value. #
     for ( 0 .. $#properties )
     {
-        my ( $sequence, $values, $average ) =
-          value_calc( $sequence, $properties[$_] );
+        my ( $values, $average ) = value_calc( \@seq_full, $properties[$_] );
 
-        my $seq_length = length($sequence) + 1;
-        my $property   = $properties[$_];
+        my $property = $properties[$_];
 
         $property =~ s/_pos/+/;
         $property =~ s/_neg/-/;
         $property =~ s/_o_w/(o\/w)/;
+        my $old_property = $property;
 
         # Units. #
         if ( $property eq 'Weight' )
@@ -220,39 +248,22 @@ ENDHTML
             $property .= '<sub>(g/mol)</sub>';
         }
 
-        # Table name #
-        print << "ENDHTML";
-<table border='1'>
-<tr><th bgcolor=F3E2A9 colspan=$seq_length><font face='Ubuntu Mono, Courier New'>$property</font></th></tr>
-ENDHTML
-
-        print '<tr>';
-        my $index = 0;
-
-        my @sequence = uniq @{$sequence};
-        @sequence = sort { $a cmp $b } @sequence;
-
-        # Column names. #
-        for ( 0 .. $#sequence )
+        # Alternate row colors. #
+        my ( $trcolor, $tdcolor );
+        if ( $_ % 2 == 0 )
         {
-            my $tag = $sequence[$_];
-            my $occurences = grep { /$tag/ } @{$sequence};
-
-            # Add the number of occurences for amino acids. #
-            if ( $occurences > 1 )
-            {
-                $tag .= '<sub>' . q{(x} . $occurences . q{)} . '</sub>';
-            }
-
-            print
-"<td bgcolor=FFFFB3 align=center><b><font face='Ubuntu Mono, Courier New'>$tag</font></b></td>\n";
-            $index++;
+            $trcolor = 'FFFAF0';
+            $tdcolor = 'FFF0CD';
         }
-        print << "ENDHTML";
+        else
+        {
+            $trcolor = 'F8FBFE';
+            $tdcolor = 'E6F4FF';
+        }
 
-<td bgcolor=FFFFB3 align=center>
-<b><font face='Ubuntu Mono, Courier New'>Average</font></b>
-</td></tr><tr>
+        # Property cell. #
+        print << "ENDHTML";
+<tr bgcolor=$trcolor><td bgcolor=$tdcolor><font face='Ubuntu Mono, Courier New'><center><b><a href='#$old_property' style='text-decoration:none;color: rgb(0,0,0)'>$property</a></b></center></font></td>
 ENDHTML
 
         # Property values for each amino acid and on average. #
@@ -264,67 +275,67 @@ ENDHTML
 "<td align=center><font face='Ubuntu Mono, Courier New'>$value</font></td>\n";
         }
         print
-"\n\n<td align=center><font face='Ubuntu Mono, Courier New'>$average</font></td></table><br>\n";
+"<td align=center><font face='Ubuntu Mono, Courier New'>$average</font></td></tr>\n\n\n";
     }
 
     # Properties Codebook. #
     print << 'ENDHTML';
-<br><hr/>
+</tbody></table><br><hr/>
 </center><font face="Ubuntu Mono, Courier New">
 <b><u>Properties Codebook</u></b><br>
 <ul type="circle">
 
-<li><b>ASA:</b> Water accessible surface area calculated using a radius of 1.4 A for the water molecule.
-A polyhedral representation is used for each atom in calculating the surface area.</li><br>
+<li><a name="ASA"><b>ASA:</b> Water accessible surface area calculated using a radius of 1.4 A for the water molecule.
+A polyhedral representation is used for each atom in calculating the surface area.</a></li><br>
 
-<li><b>b_rotR:</b> Fraction of rotatable bonds.</li><br>
+<li><a name="b_rotR"><b>b_rotR:</b> Fraction of rotatable bonds.</a></li><br>
 
-<li><b>CASA-:</b> Negative charge weighted surface area.</li><br>
+<li><a name="CASA-"><b>CASA-:</b> Negative charge weighted surface area.</a></li><br>
 
-<li><b>CASA+:</b> Positive charge weighted surface area.</li><br>
+<li><a name="CASA+"><b>CASA+:</b> Positive charge weighted surface area.</a></li><br>
 
-<li><b>E:</b> Value of the potential energy.</li><br>
+<li><a name="E"><b>E:</b> Value of the potential energy.</a></li><br>
 
-<li><b>E_sol:</b> Solvation energy.</li><br>
+<li><a name="E_sol"><b>E_sol:</b> Solvation energy.</a></li><br>
 
-<li><b>E_strain:</b> Local strain energy: the current energy minus the value of the energy at a near local minimum.</li><br>
+<li><a name="E_strain"><b>E_strain:</b> Local strain energy: the current energy minus the value of the energy at a near local minimum.</a></li><br>
 
-<li><b>E_tor:</b> Torsion (proper and improper) potential energy.</li><br>
+<li><a name="E_tor"><b>E_tor:</b> Torsion (proper and improper) potential energy.</a></li><br>
 
-<li><b>E_vdw:</b> Van der Waals component of the potential energy.</li><br>
+<li><a name="E_vdw"><b>E_vdw:</b> Van der Waals component of the potential energy.</a></li><br>
 
-<li><b>Hydro_IMGT:</b> Hydropathy value of amino acids, as reported by IMGT itself.</li><br>
+<li><a name="Hydro_IMGT"><b>Hydro_IMGT:</b> Hydropathy value of amino acids, as reported by IMGT itself.</a></li><br>
 
-<li><b>logP(o/w):</b> Log of the octanol/water partition coefficient (including implicit hydrogens). This
-property is calculated from a linear atom type model.</li><br>
+<li><a name="logP(o/w)"><b>logP(o/w):</b> Log of the octanol/water partition coefficient (including implicit hydrogens). This
+property is calculated from a linear atom type model.</a></li><br>
 
-<li><b>logS:</b> Log of the aqueous solubility (mol/L). This property is calculated from an atom
-contribution linear atom type model.</li><br>
+<li><a name="logS"><b>logS:</b> Log of the aqueous solubility (mol/L). This property is calculated from an atom
+contribution linear atom type model.</a></li><br>
 
-<li><b>PEOE_PC-:</b> Total negative partial charge: the sum of the negative qi.</li><br>
+<li><a name="PEOE_PC-"><b>PEOE_PC-:</b> Total negative partial charge: the sum of the negative qi.</a></li><br>
 
-<li><b>PEOE_PC+:</b> Total positive partial charge: the sum of the positive qi.</li><br>
+<li><a name="PEOE_PC+"><b>PEOE_PC+:</b> Total positive partial charge: the sum of the positive qi.</a></li><br>
 
-<li><b>Vdw_area:</b> Area of van der Waals surface calculated using a connection table
-approximation.</li><br>
+<li><a name="Vdw_area"><b>Vdw_area:</b> Area of van der Waals surface calculated using a connection table
+approximation.</a></li><br>
 
-<li><b>Vdw_vol:</b> Van der Waals volume calculated using a connection table approximation.</li><br>
+<li><a name="Vdw_vol"><b>Vdw_vol:</b> Van der Waals volume calculated using a connection table approximation.</a></li><br>
 
-<li><b>Vol_IMGT:</b> Volume value of amino acids, as reported by IMGT itself.</li><br>
+<li><a name="Vol_IMGT"><b>Vol_IMGT:</b> Volume value of amino acids, as reported by IMGT itself.</a></li><br>
 
-<li><b>VSA:</b> Van der Waals surface area. A polyhedral representation is used for each atom in
-calculating the surface area.</li><br>
+<li><a name="VSA"><b>VSA:</b> Van der Waals surface area. A polyhedral representation is used for each atom in
+calculating the surface area.</a></li><br>
 
-<li><b>Weight:</b> Molecular weight (including implicit hydrogens) in atomic mass units with atomic
-weights taken from CRC Handbook of Chemistry and Physics. CRC Press (1994).</li>
+<li><a name="Weight"><b>Weight:</b> Molecular weight (including implicit hydrogens) in atomic mass units with atomic
+weights taken from CRC Handbook of Chemistry and Physics. CRC Press (1994).</a></li>
 
 </ul></font>
 <center><b><font face="Ubuntu Mono, Courier New">Reference:</font></b><br>
-<table><td align='center' bgcolor='#F7F8E0'><font face="Ubuntu Mono, Courier New" size='-1'>
+<table><tr><td align='center' bgcolor='#F7F8E0'><font face="Ubuntu Mono, Courier New" size='-1'>
 Molecular Operating Environment (MOE), 2012.10;<br>
 Chemical Computing Group Inc.,<br>
 1010 Sherbooke St. West, Suite #910,<br>
-Montreal, QC, Canada, H3A 2R7, <b>2012</b>.</font></td></table></center>
+Montreal, QC, Canada, H3A 2R7, <b>2012</b>.</font></td></tr></table></center>
 ENDHTML
     print $bottom_info;
     print $cgi->end_html;
@@ -340,8 +351,8 @@ else    # Handle any other sequences. #
 <tr>
 
 <td align=left nowrap valign=middle width="70%">
-<font size="+3" color="#000099"><b>WELCOME
-<font size='+2'><br>to PhysicoChemical Descriptor<sup><small>($VERSION)</small></sup>!</b></font>
+<font size="+3" color="#000099"><b>WELCOME</b></font>
+<font size='+2' color="#000099"><br><b>to PhysicoChemical Descriptor<sup><small>($VERSION)</small></sup>!</b></font>
 </td>
 </font></td>
 
@@ -363,16 +374,15 @@ ENDHTML
 
 sub value_calc
 {
-    my ( $seq, $table ) = @_;
+    my ( $sequence, $table ) = @_;
 
-    my @sequence = split q{}, uc $seq;
     my %values;
     my $average = 0;
 
     # Get the value corresponding to each residue. #
-    for ( 0 .. $#sequence )
+    for ( 0 .. @{$sequence} - 1 )
     {
-        my $residue          = uc $sequence[$_];
+        my $residue          = uc $sequence->[$_];
         my $select_statement = << "END";
 select Value from $table where Residue = '$residue'
 END
@@ -404,9 +414,9 @@ END
     }
 
     # Return the average value for the whole sequence. #
-    $average /= ( $#sequence + 1 );
+    $average /= @{$sequence};
     $average = sprintf '%10.4f', $average;
     $average =~ s/\s/&nbsp;/g;
 
-    return \@sequence, \%values, $average;
+    return \%values, $average;
 }
