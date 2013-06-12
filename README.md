@@ -25,8 +25,6 @@ http://imgt.org/motifs/properties.pl?sequence=RWMDR
 
 \-DBI, >= 1.622 (Perl module)
 
-\-List::MoreUtils, >= 0.33 (Perl module)
-
 ## LIMITATIONS
 
 There is a limit of no more than 400 amino acids per sequence.

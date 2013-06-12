@@ -27,8 +27,6 @@ http://imgt.org/motifs/properties.pl?sequence=RWMDR
 
 -DBI, >= 1.622 (Perl module)
 
--List::MoreUtils, >= 0.33 (Perl module)
-
 =head1 LIMITATIONS
 
 There is a limit of no more than 400 amino acids per sequence.
@@ -62,7 +60,6 @@ use feature qw(say);
 
 use CGI;
 use DBI;
-use List::MoreUtils qw(uniq);
 use utf8;
 
 our $VERSION = 'v1.00';
@@ -81,8 +78,9 @@ my $bottom_info = << 'ENDHTML';
 This tool was primarily developed by D. Vlachakis, D. G. Kontopoulos and <a href='mailto:skossida@bioacademy.gr' style="text-decoration:none">S. Kossida</a> 
 from the <a href='http://www.bioacademy.gr/bioinformatics/' style="text-decoration:none">Bioinformatics and Medical Informatics Research Group</a> of the<br>
 <a href='http://www.bioacademy.gr/?lang=en' style="text-decoration:none">Biomedical Research Foundation, Academy of Athens, Greece</a> 
-in collaboration with the <a href='http://www.imgt.org/IMGTinformation/LIGM.html' style="text-decoration:none">Laboratoire d'ImmunoGénétique Moléculaire</a> of the 
-<a href='http://www.igh.cnrs.fr/EN/index.php' style="text-decoration:none">Institut de<br>Génétique Humaine, CNRS (UPR 1142), Montpellier, France</a>.
+in collaboration with <a href="http://www.imgt.org/" style="text-decoration:none">IMGT®, the international ImMunoGeneTics information system®</a>,<br>
+<a href='http://www.imgt.org/IMGTinformation/LIGM.html' style="text-decoration:none">Laboratoire d'ImmunoGénétique Moléculaire</a> of the 
+<a href='http://www.igh.cnrs.fr/EN/index.php' style="text-decoration:none">Institut de Génétique Humaine, CNRS (UPR 1142), Montpellier, France</a>.
 <br><br>
 The <a href='https://github.com/dgkontopoulos/PhysicoChemical_Descriptor' style="text-decoration:none">source code</a> is freely available under the <a href='http://www.gnu.org/licenses/agpl.html' style="text-decoration:none">GNU Affero GPL</a>.
 </sub>
@@ -206,21 +204,11 @@ ENDHTML
 ENDHTML
 
     my @seq_full = split q{}, uc $sequence;
-    my @sequence = uniq @seq_full;
-    @sequence = sort { $a cmp $b } @sequence;
 
     # Print the first row. #
-    for ( 0 .. $#sequence )
+    for ( 0 .. $#seq_full )
     {
-        my $tag = $sequence[$_];
-        my $occurences = grep { /$tag/ } @seq_full;
-
-        # Add the number of occurences for amino acids. #
-        if ( $occurences > 1 )
-        {
-            $tag .= '<sub>' . q{(x} . $occurences . q{)} . '</sub>';
-        }
-
+        my $tag = $seq_full[$_];
         print
 "<th bgcolor=FFEEC0 align=center><b><font face='Ubuntu Mono, Courier New'>$tag</font></b></th>\n";
     }
@@ -252,12 +240,12 @@ ENDHTML
         my ( $trcolor, $tdcolor );
         if ( $_ % 2 == 0 )
         {
-            $trcolor = 'FFFAF0';
+            $trcolor = 'FFF2D7';
             $tdcolor = 'FFF0CD';
         }
         else
         {
-            $trcolor = 'F8FBFE';
+            $trcolor = 'E1F1FF';
             $tdcolor = 'E6F4FF';
         }
 
@@ -267,9 +255,9 @@ ENDHTML
 ENDHTML
 
         # Property values for each amino acid and on average. #
-        for ( 0 .. $#sequence )
+        for ( 0 .. $#seq_full )
         {
-            my $tag   = uc $sequence[$_];
+            my $tag   = uc $seq_full[$_];
             my $value = $values->{$tag};
             print
 "<td align=center><font face='Ubuntu Mono, Courier New'>$value</font></td>\n";
