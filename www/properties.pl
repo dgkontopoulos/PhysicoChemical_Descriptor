@@ -11,11 +11,11 @@ amino acid sequence.
 
 =head1 USAGE
 
-http://imgt.org/motifs/properties.pl?sequence="SEQUENCE"
+http://imgt.org/pc_descriptor/properties.pl?sequence="SEQUENCE"
 
 =head1 EXAMPLE
 
-http://imgt.org/motifs/properties.pl?sequence=RWMDR
+http://imgt.org/pc_descriptor/properties.pl?sequence=RWMDR
 
 =head1 DEPENDENCIES
 
@@ -209,8 +209,8 @@ ENDHTML
     for ( 0 .. $#seq_full )
     {
         my $tag = $seq_full[$_];
-        print
-"<th bgcolor=FFEEC0 align=center><b><font face='Ubuntu Mono, Courier New'>$tag</font></b></th>\n";
+        say
+"<th bgcolor=FFEEC0 align=center><b><font face='Ubuntu Mono, Courier New'>$tag</font></b></th>";
     }
     print << "ENDHTML";
 <th bgcolor=FFEEC0 align=center>
@@ -259,11 +259,11 @@ ENDHTML
         {
             my $tag   = uc $seq_full[$_];
             my $value = $values->{$tag};
-            print
-"<td align=center><font face='Ubuntu Mono, Courier New'>$value</font></td>\n";
+            say
+"<td align=center><font face='Ubuntu Mono, Courier New'>$value</font></td>";
         }
-        print
-"<td align=center><font face='Ubuntu Mono, Courier New'>$average</font></td></tr>\n\n\n";
+        say
+"<td align=center><font face='Ubuntu Mono, Courier New'>$average</font></td></tr>\n\n";
     }
 
     # Properties Codebook. #
@@ -378,7 +378,7 @@ END
       # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
       # The line below must change to the amino acid properties database file. #
       # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
-        my $properties_loc = '/home/ligmdb/share/motifs/amino_acids.db';
+        my $properties_loc = '../amino_acids.db';
         my $properties_db =
           DBI->connect( "dbi:SQLite:$properties_loc", q{}, q{} );
 

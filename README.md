@@ -9,11 +9,11 @@ amino acid sequence.
 
 ## USAGE
 
-http://imgt.org/motifs/properties.pl?sequence="SEQUENCE"
+http://imgt.org/pc_descriptor/properties.pl?sequence="SEQUENCE"
 
 ## EXAMPLE
 
-http://imgt.org/motifs/properties.pl?sequence=RWMDR
+http://imgt.org/pc_descriptor/properties.pl?sequence=RWMDR
 
 ## DEPENDENCIES
 
