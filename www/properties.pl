@@ -68,9 +68,39 @@ my $cgi = CGI->new;
 print $cgi->header;
 
 my $sequence = $cgi->param('sequence');
+my $advanced = $cgi->param('advanced');
 
 # Remove single and double quotes in the sequence, if any. #
 $sequence =~ s/["|']//g;
+
+my ( $dbh, $sql, $result, @tables, $iterator );
+
+if ( $advanced == 1 )
+{
+    # Connect to the database and get a list of tables. #
+    $dbh = DBI->connect( "dbi:SQLite:../amino_acids.db", q{}, q{} );
+    $sql = << 'ENDSQL';
+Select name from sqlite_master where type = "table"
+ENDSQL
+    $result = $dbh->selectall_arrayref($sql);
+
+    @tables;
+    $iterator = 0;
+    while ( $result->[$iterator]->[0] )
+    {
+
+        # Perform aesthetic conversions and store table names. #
+        my $property = $result->[$iterator]->[0];
+        $property =~ s/_pos_?/+/;
+        $property =~ s/_neg_?/-/;
+        $property =~ s/_o_w_?/(o\/w)/;
+
+        push @tables, $property;
+        $iterator++;
+    }
+
+    @tables = sort { lc $a cmp lc $b } @tables;
+}
 
 # Stuff to be printed at the end of the page. #
 my $bottom_info = << 'ENDHTML';
@@ -93,14 +123,13 @@ if ( $sequence =~ /^\s*$/ )    # Reject empty sequences. #
     # Header and error message. #
     print << "ENDHTML";
 <center>
-<table cols=2 width="100%" >
+<table cols=2 width='100%' >
 <tr>
 
-<td align=left nowrap valign=middle width="70%">
-<font size="+3" color="#000099"><b>WELCOME
-<font size='+2'><br>to PhysicoChemical Descriptor<sup><small>($VERSION)</small></sup>!</b></font>
+<td align=left nowrap valign=middle width='70%'>
+<font size='+3' color='#000099'><b>WELCOME</font>
+<font size='+2' color='#000099'><br>to PhysicoChemical Descriptor<sup><small>($VERSION)</small></sup>!</b></font>
 </td>
-</font></td>
 
 <td align=right valign=top width="30%">
 <a href="http://www.imgt.org"><img src="http://imgt.org/IMGT_vquest/share/textes/images/logoIMGT.png" alt="IMGT"></a>
@@ -163,111 +192,118 @@ END_HEADER
     # Change line after every 50 characters. #
     $input_seq =~ s/(\w{50})/$1<br>&nbsp;/g;
 
-    # Header, input sequence and description. #
+    # Header, input sequence. #
     print << "ENDHTML";
 <center>
-<table cols=2 width="100%" >
+<table cols=2 width='100%' >
 <tr>
 
-<td align=left nowrap valign=middle width="70%">
-<font size="+3" color="#000099"><b>WELCOME</b></font>
-<font size='+2' color="#000099"><br><b>to PhysicoChemical Descriptor<sup><small>($VERSION)</small></sup>!</b></font>
+<td align=left nowrap valign=middle width='70%'>
+<font size='+3' color='#000099'><b>WELCOME</b></font>
+<font size='+2' color='#000099'><br><b>to PhysicoChemical Descriptor<sup><small>($VERSION)</small></sup>!</b></font>
 </td>
 
-<td align=right valign=top width="30%">
-<a href="http://www.imgt.org"><img src="http://imgt.org/IMGT_vquest/share/textes/images/logoIMGT.png" alt="IMGT"></a>
+<td align=right valign=top width='30%'>
+<a href='http://www.imgt.org'><img src='http://imgt.org/IMGT_vquest/share/textes/images/logoIMGT.png' alt='IMGT'></a>
 </td>
 </tr>
 </table>
 </center>
 <hr/>
-<font face="Ubuntu Mono, Courier New">Input sequence:<br><b>&nbsp;$input_seq</b>
+<font face='Ubuntu Mono, Courier New'>Input sequence:<br><b>&nbsp;$input_seq</b>
 </font><br><br>
-<font face="Ubuntu Mono, Courier New">The following table displays calculations of various physicochemical properties
+ENDHTML
+
+    # Check if we're using the advanced interface. #
+    if ( $advanced != 1 )
+    {
+        print << "ENDHTML";
+<font face='Ubuntu Mono, Courier New'>The following table displays calculations of various physicochemical properties
 of the input sequence.
-<br>Clicking on property codes (first column) will show their description.</font>
+<br>Clicking on property codes (first column) will show their description.
 <br><br><center>
 ENDHTML
 
-    # List the available properties. #
-    my @properties = qw(
-      Hydro_IMGT  Vol_IMGT ASA     b_rotR CASA_pos CASA_neg E
-      E_sol       E_strain E_tor   E_vdw  logP_o_w logS     PEOE_PC_pos
-      PEOE_PC_neg Vdw_area Vdw_vol VSA    Weight
-    );
+        # List the available properties. #
+        my @properties = qw(
+          Hydro_IMGT  Vol_IMGT ASA     b_rotR CASA_pos CASA_neg E
+          E_sol       E_strain E_tor   E_vdw  logP_o_w logS     PEOE_PC_pos
+          PEOE_PC_neg Vdw_area Vdw_vol VSA    Weight
+        );
 
-    # Sort properties alphabetically. #
-    @properties = sort { lc $a cmp lc $b } @properties;
+        # Sort properties alphabetically. #
+        @properties = sort { lc $a cmp lc $b } @properties;
 
-    print << "ENDHTML";
+        print << "ENDHTML";
 <table border="1" id="properties"><thead><tr><th></th>
 ENDHTML
 
-    my @seq_full = split q{}, uc $sequence;
+        my @seq_full = split q{}, uc $sequence;
 
-    # Print the first row. #
-    for ( 0 .. $#seq_full )
-    {
-        my $tag = $seq_full[$_];
-        say
+        # Print the first row. #
+        for ( 0 .. $#seq_full )
+        {
+            my $tag = $seq_full[$_];
+            say
 "<th bgcolor=FFEEC0 align=center><b><font face='Ubuntu Mono, Courier New'>$tag</font></b></th>";
-    }
-    print << "ENDHTML";
+        }
+        print << "ENDHTML";
 <th bgcolor=FFEEC0 align=center>
 <b><font face='Ubuntu Mono, Courier New'>Average</font></b>
 </th></tr></thead><tfoot></tfoot><tbody>
 ENDHTML
 
-    # For each property, compute its value. #
-    for ( 0 .. $#properties )
-    {
-        my ( $values, $average ) = value_calc( \@seq_full, $properties[$_] );
-
-        my $property = $properties[$_];
-
-        $property =~ s/_pos/+/;
-        $property =~ s/_neg/-/;
-        $property =~ s/_o_w/(o\/w)/;
-        my $old_property = $property;
-
-        # Units. #
-        if ( $property eq 'Weight' )
+        # For each property, compute its value. #
+        for ( 0 .. $#properties )
         {
-            $property .= '<sub>(g/mol)</sub>';
-        }
+            my ( $values, $average ) =
+              value_calc( \@seq_full, $properties[$_] );
 
-        # Alternate row colors. #
-        my ( $trcolor, $tdcolor );
-        if ( $_ % 2 == 0 )
-        {
-            $trcolor = 'FFF2D7';
-            $tdcolor = 'FFF0CD';
-        }
-        else
-        {
-            $trcolor = 'E1F1FF';
-            $tdcolor = 'E6F4FF';
-        }
+            my $property = $properties[$_];
 
-        # Property cell. #
-        print << "ENDHTML";
+            $property =~ s/_pos/+/;
+            $property =~ s/_neg/-/;
+            $property =~ s/_o_w/(o\/w)/;
+            my $old_property = $property;
+
+            # Units. #
+            if ( $property eq 'Weight' )
+            {
+                $property .= '<sub>(g/mol)</sub>';
+            }
+
+            # Alternate row colors. #
+            my ( $trcolor, $tdcolor );
+            if ( $_ % 2 == 0 )
+            {
+                $trcolor = 'FFF2D7';
+                $tdcolor = 'FFF0CD';
+            }
+            else
+            {
+                $trcolor = 'E1F1FF';
+                $tdcolor = 'E6F4FF';
+            }
+
+            # Property cell. #
+            print << "ENDHTML";
 <tr bgcolor=$trcolor><td bgcolor=$tdcolor><font face='Ubuntu Mono, Courier New'><center><b><a href='#$old_property' style='text-decoration:none;color: rgb(0,0,0)'>$property</a></b></center></font></td>
 ENDHTML
 
-        # Property values for each amino acid and on average. #
-        for ( 0 .. $#seq_full )
-        {
-            my $tag   = uc $seq_full[$_];
-            my $value = $values->{$tag};
-            say
+            # Property values for each amino acid and on average. #
+            for ( 0 .. $#seq_full )
+            {
+                my $tag   = uc $seq_full[$_];
+                my $value = $values->{$tag};
+                say
 "<td align=center><font face='Ubuntu Mono, Courier New'>$value</font></td>";
-        }
-        say
+            }
+            say
 "<td align=center><font face='Ubuntu Mono, Courier New'>$average</font></td></tr>\n\n";
-    }
+        }
 
-    # Properties Codebook. #
-    print << 'ENDHTML';
+        # Properties Codebook. #
+        print << 'ENDHTML';
 </tbody></table><br><hr/>
 </center><font face="Ubuntu Mono, Courier New">
 <b><u>Properties Codebook</u></b><br>
@@ -325,10 +361,58 @@ Chemical Computing Group Inc.,<br>
 1010 Sherbooke St. West, Suite #910,<br>
 Montreal, QC, Canada, H3A 2R7, <b>2012</b>.</font></td></tr></table></center>
 ENDHTML
+    }
+    elsif ($advanced == 1
+        && $cgi->param('proceed') )    # Advanced interface, show results. #
+    {
+
+    }
+    elsif ( $advanced == 1 )    # Advanced interface, specify parameters. #
+    {
+        print << "ENDHTML";
+<font face='Ubuntu Mono, Courier New'>
+This is the advanced interface of the tool. To go back to the simple interface, click
+<a href='http://imgt.org/pc_descriptor/properties.pl?sequence=$sequence' style='text-decoration:none'>here</a>.
+<br>Otherwise, please select the physicochemical properties to compute for the input sequence.
+</font>
+ENDHTML
+
+        print << "ENDHTML";
+<form id = 'submit' method = 'post'
+action=http://imgt.org/pc_descriptor/properties.pl?sequence=$sequence&advanced=1>
+
+<input type=hidden name='sequence' value='$sequence'>
+<input type=hidden name='advanced' value='1'>
+<input type=hidden name='proceed' value='1'>
+ENDHTML
+
+        # List the available properties. #
+        say '<center><table cellspacing = "5"><tr>';
+        for ( 0 .. $#tables )
+        {
+            if ( $_ % 8 == 0 )
+            {
+                say '</tr><tr></tr><tr></tr><tr>';
+            }
+
+            # Create checkbuttons. #
+            print << "ENDHTML";
+<td><font face='Ubuntu Mono, Courier New' size='2'>
+<input type=checkbox name='$tables[$_]' value='1'>$tables[$_]
+</font></td><td></td>
+ENDHTML
+        }
+
+        # Create the submit button. #
+        print << 'ENDHTML';
+</table><br>
+<input id='submit' type='submit' value=' Submit '></form></center><br>
+ENDHTML
+    }
     print $bottom_info;
     print $cgi->end_html;
 }
-else    # Handle any other sequences. #
+else    # Handle any non-protein sequences. #
 {
     print $cgi->start_html( -title => 'PC Descriptor || ERROR!' );
 
