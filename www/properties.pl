@@ -73,34 +73,8 @@ my $advanced = $cgi->param('advanced');
 # Remove single and double quotes in the sequence, if any. #
 $sequence =~ s/["|']//g;
 
-my ( $dbh, $sql, $result, @tables, $iterator );
-
-if ( $advanced == 1 )
-{
-    # Connect to the database and get a list of tables. #
-    $dbh = DBI->connect( "dbi:SQLite:../amino_acids.db", q{}, q{} );
-    $sql = << 'ENDSQL';
-Select name from sqlite_master where type = "table"
-ENDSQL
-    $result = $dbh->selectall_arrayref($sql);
-
-    @tables;
-    $iterator = 0;
-    while ( $result->[$iterator]->[0] )
-    {
-
-        # Perform aesthetic conversions and store table names. #
-        my $property = $result->[$iterator]->[0];
-        $property =~ s/_pos_?/+/;
-        $property =~ s/_neg_?/-/;
-        $property =~ s/_o_w_?/(o\/w)/;
-
-        push @tables, $property;
-        $iterator++;
-    }
-
-    @tables = sort { lc $a cmp lc $b } @tables;
-}
+# Connect to the amino acids database. #
+my $dbh = DBI->connect( 'dbi:SQLite:../amino_acids.db', q{}, q{} );
 
 # Stuff to be printed at the end of the page. #
 my $bottom_info = << 'ENDHTML';
@@ -140,8 +114,6 @@ if ( $sequence =~ /^\s*$/ )    # Reject empty sequences. #
 <font face="Ubuntu Mono, Courier New"><b>ERROR!</b><br>No sequence was entered!</font>
 </center>
 ENDHTML
-
-    print $bottom_info . $cgi->end_html;
 }
 elsif ( $sequence =~ /^[A|R|N|D|C|E|Q|G|H|I|L|K|M|F|P|S|T|W|Y|V]+$/i )
 {
@@ -231,81 +203,11 @@ ENDHTML
           PEOE_PC_neg Vdw_area Vdw_vol VSA    Weight
         );
 
-        # Sort properties alphabetically. #
-        @properties = sort { lc $a cmp lc $b } @properties;
-
-        print << "ENDHTML";
-<table border="1" id="properties"><thead><tr><th></th>
-ENDHTML
-
-        my @seq_full = split q{}, uc $sequence;
-
-        # Print the first row. #
-        for ( 0 .. $#seq_full )
-        {
-            my $tag = $seq_full[$_];
-            say
-"<th bgcolor=FFEEC0 align=center><b><font face='Ubuntu Mono, Courier New'>$tag</font></b></th>";
-        }
-        print << "ENDHTML";
-<th bgcolor=FFEEC0 align=center>
-<b><font face='Ubuntu Mono, Courier New'>Average</font></b>
-</th></tr></thead><tfoot></tfoot><tbody>
-ENDHTML
-
-        # For each property, compute its value. #
-        for ( 0 .. $#properties )
-        {
-            my ( $values, $average ) =
-              value_calc( \@seq_full, $properties[$_] );
-
-            my $property = $properties[$_];
-
-            $property =~ s/_pos/+/;
-            $property =~ s/_neg/-/;
-            $property =~ s/_o_w/(o\/w)/;
-            my $old_property = $property;
-
-            # Units. #
-            if ( $property eq 'Weight' )
-            {
-                $property .= '<sub>(g/mol)</sub>';
-            }
-
-            # Alternate row colors. #
-            my ( $trcolor, $tdcolor );
-            if ( $_ % 2 == 0 )
-            {
-                $trcolor = 'FFF2D7';
-                $tdcolor = 'FFF0CD';
-            }
-            else
-            {
-                $trcolor = 'E1F1FF';
-                $tdcolor = 'E6F4FF';
-            }
-
-            # Property cell. #
-            print << "ENDHTML";
-<tr bgcolor=$trcolor><td bgcolor=$tdcolor><font face='Ubuntu Mono, Courier New'><center><b><a href='#$old_property' style='text-decoration:none;color: rgb(0,0,0)'>$property</a></b></center></font></td>
-ENDHTML
-
-            # Property values for each amino acid and on average. #
-            for ( 0 .. $#seq_full )
-            {
-                my $tag   = uc $seq_full[$_];
-                my $value = $values->{$tag};
-                say
-"<td align=center><font face='Ubuntu Mono, Courier New'>$value</font></td>";
-            }
-            say
-"<td align=center><font face='Ubuntu Mono, Courier New'>$average</font></td></tr>\n\n";
-        }
+        create_results_table( \@properties, $sequence );
 
         # Properties Codebook. #
         print << 'ENDHTML';
-</tbody></table><br><hr/>
-</center><font face="Ubuntu Mono, Courier New">
+<br><hr/></center><font face="Ubuntu Mono, Courier New">
 <b><u>Properties Codebook</u></b><br>
 <ul type="circle">
 
@@ -366,18 +268,94 @@ ENDHTML
         && $cgi->param('proceed') )    # Advanced interface, show results. #
     {
 
+        # Advanced interface text. #
+        print << "ENDHTML";
+<font face='Ubuntu Mono, Courier New'>
+This is the advanced interface of the tool. To go back to the simple interface (calculating only default properties), click
+<a href='http://imgt.org/pc_descriptor/properties.pl?sequence=$sequence' style='text-decoration:none'>here</a>.
+<br>To reselect properties to be computed, click
+<a href='http://imgt.org/pc_descriptor/properties.pl?sequence=$sequence&advanced=1' style='text-decoration:none'>here</a>.
+</font><br><br>
+ENDHTML
+
+        # Get a list of parameters and try to find selected properties. #
+        my @parameters = $cgi->param;
+
+        for ( 0 .. $#parameters )
+        {
+            if (   $parameters[$_] eq 'sequence'
+                or $parameters[$_] eq 'advanced'
+                or $parameters[$_] eq 'proceed' )
+            {
+                undef $parameters[$_];
+            }
+        }
+
+        @parameters = grep { defined } @parameters;
+
+        # If no properties were found, exit. #
+        if ( $#parameters == -1 )
+        {
+            print << 'ENDHTML';
+<center><font face='Ubuntu Mono, Courier New' size='+1'>
+<b>ERROR!</b><br>
+No properties have been selected!<br>
+Please <a href='javascript:history.go(-1)'>go back</a> and select some properties to be computed.</font>
+</center><br>
+ENDHTML
+            print $bottom_info . $cgi->end_html;
+            exit;
+        }
+
+        my @properties;
+        foreach my $element (@parameters)
+        {
+
+            # Substitute illegal characters. #
+            $element = string_reformat( $element, 'for_sql' );
+
+            # See if a table exists with that name. #
+            my $select_text = << "END_SQL";
+Select name from sqlite_master where type='table' and name='$element';
+END_SQL
+            my $result = $dbh->selectall_arrayref($select_text);
+
+            if ( $result->[0]->[0] )
+            {
+                push @properties, $result->[0]->[0];
+            }
+        }
+
+        # If no valid properties were found, exit. #
+        if ( $#properties == -1 )
+        {
+            print << 'ENDHTML';
+<center><font face='Ubuntu Mono, Courier New' size='+1'>
+<b>ERROR!</b><br>
+No properties have been selected!<br>
+Please <a href='javascript:history.go(-1)'>go back</a> and select some properties to be computed.</font>
+</center><br>
+ENDHTML
+            print $bottom_info . $cgi->end_html;
+            exit;
+        }
+
+        print '<center>';
+        create_results_table( \@properties, $sequence );
+        print '</center><br>';
+
     }
     elsif ( $advanced == 1 )    # Advanced interface, specify parameters. #
     {
+
+        # Advanced interface text and beginning the form #
         print << "ENDHTML";
 <font face='Ubuntu Mono, Courier New'>
 This is the advanced interface of the tool. To go back to the simple interface, click
 <a href='http://imgt.org/pc_descriptor/properties.pl?sequence=$sequence' style='text-decoration:none'>here</a>.
 <br>Otherwise, please select the physicochemical properties to compute for the input sequence.
 </font>
-ENDHTML
 
-        print << "ENDHTML";
 <form id = 'submit' method = 'post'
 action=http://imgt.org/pc_descriptor/properties.pl?sequence=$sequence&advanced=1>
 
@@ -386,9 +364,12 @@ action=http://imgt.org/pc_descriptor/properties.pl?sequence=$sequence&advanced=1
 <input type=hidden name='proceed' value='1'>
 ENDHTML
 
-        # List the available properties. #
+        # Get and list the available properties. #
         say '<center><table cellspacing = "5"><tr>';
-        for ( 0 .. $#tables )
+
+        my $tables = get_available_properties();
+
+        for ( 0 .. @{$tables} - 1 )
         {
             if ( $_ % 8 == 0 )
             {
@@ -398,7 +379,7 @@ ENDHTML
             # Create checkbuttons. #
             print << "ENDHTML";
 <td><font face='Ubuntu Mono, Courier New' size='2'>
-<input type=checkbox name='$tables[$_]' value='1'>$tables[$_]
+<input type=checkbox name='$tables->[$_]' value='1'>$tables->[$_]
 </font></td><td></td>
 ENDHTML
         }
@@ -409,8 +390,6 @@ ENDHTML
 <input id='submit' type='submit' value=' Submit '></form></center><br>
 ENDHTML
     }
-    print $bottom_info;
-    print $cgi->end_html;
 }
 else    # Handle any non-protein sequences. #
 {
@@ -437,12 +416,135 @@ else    # Handle any non-protein sequences. #
 <font face="Ubuntu Mono, Courier New"><b>ERROR!</b><br>This does not look like an amino acid sequence!</font>
 </center>
 ENDHTML
-    print $bottom_info . $cgi->end_html;
 }
+
+# Print bottom text and details. #
+print $bottom_info . $cgi->end_html;
 
 #############################################
 # S   U   B   R   O   U   T   I   N   E   S #
 #############################################
+
+# Just what the function name reads. #
+sub create_results_table
+{
+    my ( $properties, $sequence ) = @_;
+
+    # Sort properties alphabetically. #
+    my @properties = sort { lc $a cmp lc $b } @{$properties};
+
+    print << "ENDHTML";
+<table border="1" id="properties"><thead><tr><th></th>
+ENDHTML
+
+    my @seq_full = split q{}, uc $sequence;
+
+    # Print the first row. #
+    for ( 0 .. $#seq_full )
+    {
+        my $tag = $seq_full[$_];
+        say
+"<th bgcolor=FFEEC0 align=center><b><font face='Ubuntu Mono, Courier New'>$tag</font></b></th>";
+    }
+    print << "ENDHTML";
+<th bgcolor=FFEEC0 align=center>
+<b><font face='Ubuntu Mono, Courier New'>Average</font></b>
+</th></tr></thead><tfoot></tfoot><tbody>
+ENDHTML
+
+    # For each property, compute its value. #
+    for ( 0 .. $#properties )
+    {
+        my ( $values, $average ) =
+          value_calc( \@seq_full, $properties[$_] );
+
+        my $property = string_reformat( $properties[$_], 'from_sql' );
+        my $old_property = $property;
+
+        # Units. #
+        if ( $property eq 'Weight' )
+        {
+            $property .= '<sub>(g/mol)</sub>';
+        }
+
+        # Alternate row colors. #
+        my ( $trcolor, $tdcolor );
+        if ( $_ % 2 == 0 )
+        {
+            $trcolor = 'FFF2D7';
+            $tdcolor = 'FFF0CD';
+        }
+        else
+        {
+            $trcolor = 'E1F1FF';
+            $tdcolor = 'E6F4FF';
+        }
+
+        # Property cell. #
+        print << "ENDHTML";
+<tr bgcolor=$trcolor><td bgcolor=$tdcolor><font face='Ubuntu Mono, Courier New'><center><b><a href='#$old_property' style='text-decoration:none;color: rgb(0,0,0)'>$property</a></b></center></font></td>
+ENDHTML
+
+        # Property values for each amino acid and on average. #
+        for ( 0 .. $#seq_full )
+        {
+            my $tag   = uc $seq_full[$_];
+            my $value = $values->{$tag};
+            say
+"<td align=center><font face='Ubuntu Mono, Courier New'>$value</font></td>";
+        }
+        say
+"<td align=center><font face='Ubuntu Mono, Courier New'>$average</font></td></tr>\n\n";
+    }
+    print '</tbody></table>';
+    return 0;
+}
+
+# Get the names of the properties within the database. #
+sub get_available_properties
+{
+
+    # Connect to the database and get a list of tables. #
+    my $sql = << 'ENDSQL';
+Select name from sqlite_master where type = "table"
+ENDSQL
+    my $result = $dbh->selectall_arrayref($sql);
+
+    my $iterator = 0;
+    my @tables;
+    while ( $result->[$iterator]->[0] )
+    {
+
+        # Perform aesthetic conversions and store table names. #
+        push @tables, string_reformat( $result->[$iterator]->[0], 'from_sql' );
+        $iterator++;
+    }
+
+    @tables = sort { lc $a cmp lc $b } @tables;
+    return \@tables;
+}
+
+# Remove illegal characters and vice versa. #
+sub string_reformat
+{
+    my ( $string, $mode ) = @_;
+
+    if ( $mode eq 'from_sql' )    # After receiving SQL output. #
+    {
+        $string =~ s/_pos_?/+/g;
+        $string =~ s/_neg_?/-/g;
+        $string =~ s/_o_w_?/(o\/w)/g;
+    }
+    elsif ( $mode eq 'for_sql' )    # For an SQL statement. #
+    {
+        $string =~ s/[+]/_pos_/g;
+        $string =~ s/[-]/_neg_/g;
+        $string =~ s/[(]o\/w[)]/_o_w/g;
+        $string =~ s/_$//;
+    }
+
+    return $string;
+}
 
 sub value_calc
 {
@@ -463,10 +565,8 @@ END
       # The line below must change to the amino acid properties database file. #
       # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
         my $properties_loc = '../amino_acids.db';
-        my $properties_db =
-          DBI->connect( "dbi:SQLite:$properties_loc", q{}, q{} );
 
-        my $db_sel = $properties_db->prepare($select_statement);
+        my $db_sel = $dbh->prepare($select_statement);
         $db_sel->execute();
 
         my $result = $db_sel->fetchall_arrayref;
