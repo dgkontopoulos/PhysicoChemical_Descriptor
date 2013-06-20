@@ -56,7 +56,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 use strict;
 use warnings;
 
-use feature qw(say);
+use feature qw(say switch);
 
 use CGI;
 use DBI;
@@ -347,7 +347,7 @@ ENDHTML
 
         print '<center>';
         create_results_table( \@properties, $sequence );
-        print '</center><br>';
+        print '</center><br><font face="Ubuntu Mono, Courier New">';
 
     }
     elsif ( $advanced == 1 )    # Advanced interface, specify parameters. #
@@ -393,6 +393,7 @@ ENDHTML
         print << 'ENDHTML';
 </table><br>
 <input id='submit' type='submit' value=' Submit '></form></center><br>
+<font face="Ubuntu Mono, Courier New">
 ENDHTML
     }
 }
@@ -429,6 +430,30 @@ print $bottom_info . $cgi->end_html;
 #############################################
 # S   U   B   R   O   U   T   I   N   E   S #
 #############################################
+
+# Add units to properties, where available. #
+sub add_units
+{
+    my ($property) = @_;
+
+    for ($property)
+    {
+        $property .= '<sub>(g/mol)</sub>' when 'Weight';
+        $property .= '<sub>(amu/Å<sup>3</sup>)</sub>' when 'density';
+        $property .=
+          '<sub>(Å<sup>2</sup>)</sub>' when
+/^TPSA|vdw_area|vsa_acc|vsa_acid|vsa_base|vsa_don|vsa_hyd|vsa_other|vsa_pol$/;
+        $property .= '<sub>(Å<sup>3</sup>)</sub>' when 'vdw_vol';
+        $property .=
+          '<sub>(kcal/mol)</sub>' when
+/^AM1_E|AM1_Eele|AM1_HF|AM1_IP|MNDO_E|MNDO_Eele|MNDO_HF|MNDO_IP|PM3_E|PM3_Eele|PM3_HF|PM3_IP$/;
+        $property .=
+          '<sub>(eV)</sub>' when
+          /^AM1_LUMO|AM1_HOMO|MNDO_LUMO|MNDO_HOMO|PM3_LUMO|PM3_HOMO$/;
+        default {};
+    }
+    return $property;
+}
 
 # Just what the function name reads. #
 sub create_results_table
@@ -467,10 +492,7 @@ ENDHTML
         my $old_property = $property;
 
         # Units. #
-        if ( $property eq 'Weight' )
-        {
-            $property .= '<sub>(g/mol)</sub>';
-        }
+        $property = add_units($property);
 
         # Alternate row colors. #
         my ( $trcolor, $tdcolor );
@@ -568,11 +590,6 @@ sub value_calc
 select Value from $table where Residue = '$residue'
 END
 
-      # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
-      # The line below must change to the amino acid properties database file. #
-      # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
-        my $properties_loc = '../amino_acids.db';
-
         my $db_sel = $dbh->prepare($select_statement);
         $db_sel->execute();
 
@@ -581,7 +598,7 @@ END
         {
             $average += $result->[0]->[0];
             $residue = uc $residue;
-            $values{$residue} //= sprintf '%10.4f', $result->[0]->[0];
+            $values{$residue} //= sprintf '%12.4f', $result->[0]->[0];
             $values{$residue} =~ s/\s/&nbsp;/g;
         }
         else
