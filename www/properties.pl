@@ -86,7 +86,8 @@ in collaboration with <a href="http://www.imgt.org/" style="text-decoration:none
 <a href='http://www.imgt.org/IMGTinformation/LIGM.html' style="text-decoration:none">Laboratoire d'ImmunoGénétique Moléculaire</a> of the 
 <a href='http://www.igh.cnrs.fr/EN/index.php' style="text-decoration:none">Institut de Génétique Humaine, CNRS (UPR 1142), Montpellier, France</a>.
 <br><br>
-The <a href='https://github.com/dgkontopoulos/PhysicoChemical_Descriptor' style="text-decoration:none">source code</a> is freely available under the <a href='http://www.gnu.org/licenses/agpl.html' style="text-decoration:none">GNU Affero GPL</a>.
+The <a href='https://github.com/dgkontopoulos/PhysicoChemical_Descriptor' style="text-decoration:none">source code</a> is freely available under the 
+<a href='http://www.gnu.org/licenses/agpl.html' style="text-decoration:none">GNU Affero GPL</a>.
 </sub>
 ENDHTML
 
@@ -314,11 +315,15 @@ ENDHTML
             # Substitute illegal characters. #
             $element = string_reformat( $element, 'for_sql' );
 
-            # See if a table exists with that name. #
-            my $select_text = << "END_SQL";
-Select name from sqlite_master where type='table' and name='$element';
+            # Query to check if a table exists with that name. #
+            my $select_text = << 'END_SQL';
+Select name from sqlite_master where type='table' and name = ?;
 END_SQL
-            my $result = $dbh->selectall_arrayref($select_text);
+            my $db_sel = $dbh->prepare($select_text);
+
+            # Bind variable to avoid sql injection attack. #
+            $db_sel->execute($element);
+            my $result = $db_sel->fetchall_arrayref;
 
             if ( $result->[0]->[0] )
             {
@@ -482,7 +487,9 @@ ENDHTML
 
         # Property cell. #
         print << "ENDHTML";
-<tr bgcolor=$trcolor><td bgcolor=$tdcolor><font face='Ubuntu Mono, Courier New'><center><b><a href='#$old_property' style='text-decoration:none;color: rgb(0,0,0)'>$property</a></b></center></font></td>
+<tr bgcolor=$trcolor><td bgcolor=$tdcolor><font face='Ubuntu Mono, Courier New'>
+<center><b><a href='#$old_property' style='text-decoration:none;color: rgb(0,0,0)'>$property</a></b>
+</center></font></td>
 ENDHTML
 
         # Property values for each amino acid and on average. #
