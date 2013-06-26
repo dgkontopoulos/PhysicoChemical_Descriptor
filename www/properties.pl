@@ -62,7 +62,7 @@ use CGI;
 use DBI;
 use utf8;
 
-our $VERSION = 'v1.00';
+our $VERSION = 'v1.01';
 
 my $cgi = CGI->new;
 print $cgi->header;
@@ -194,6 +194,8 @@ ENDHTML
 <font face='Ubuntu Mono, Courier New'>The following table displays calculations of various physicochemical properties
 of the input sequence.
 <br>Clicking on property codes (first column) will show their description.
+<br>To use the advanced interface, click
+<a href='http://imgt.org/pc_descriptor/properties.pl?sequence=$sequence&advanced=1' style='text-decoration:none'>here</a>.
 <br><br><center>
 ENDHTML
 
@@ -207,63 +209,7 @@ ENDHTML
         create_results_table( \@properties, $sequence );
 
         # Properties Codebook. #
-        print << 'ENDHTML';
-<br><hr/></center><font face="Ubuntu Mono, Courier New">
-<b><u>Properties Codebook</u></b><br>
-<ul type="circle">
-
-<li><a name="ASA"><b>ASA:</b> Water accessible surface area calculated using a radius of 1.4 A for the water molecule.
-A polyhedral representation is used for each atom in calculating the surface area.</a></li><br>
-
-<li><a name="b_rotR"><b>b_rotR:</b> Fraction of rotatable bonds.</a></li><br>
-
-<li><a name="CASA-"><b>CASA-:</b> Negative charge weighted surface area.</a></li><br>
-
-<li><a name="CASA+"><b>CASA+:</b> Positive charge weighted surface area.</a></li><br>
-
-<li><a name="E"><b>E:</b> Value of the potential energy.</a></li><br>
-
-<li><a name="E_sol"><b>E_sol:</b> Solvation energy.</a></li><br>
-
-<li><a name="E_strain"><b>E_strain:</b> Local strain energy: the current energy minus the value of the energy at a near local minimum.</a></li><br>
-
-<li><a name="E_tor"><b>E_tor:</b> Torsion (proper and improper) potential energy.</a></li><br>
-
-<li><a name="E_vdw"><b>E_vdw:</b> Van der Waals component of the potential energy.</a></li><br>
-
-<li><a name="Hydro_IMGT"><b>Hydro_IMGT:</b> Hydropathy value of amino acids, as reported by IMGT itself.</a></li><br>
-
-<li><a name="logP(o/w)"><b>logP(o/w):</b> Log of the octanol/water partition coefficient (including implicit hydrogens). This
-property is calculated from a linear atom type model.</a></li><br>
-
-<li><a name="logS"><b>logS:</b> Log of the aqueous solubility (mol/L). This property is calculated from an atom
-contribution linear atom type model.</a></li><br>
-
-<li><a name="PEOE_PC-"><b>PEOE_PC-:</b> Total negative partial charge: the sum of the negative qi.</a></li><br>
-
-<li><a name="PEOE_PC+"><b>PEOE_PC+:</b> Total positive partial charge: the sum of the positive qi.</a></li><br>
-
-<li><a name="Vdw_area"><b>Vdw_area:</b> Area of van der Waals surface calculated using a connection table
-approximation.</a></li><br>
-
-<li><a name="Vdw_vol"><b>Vdw_vol:</b> Van der Waals volume calculated using a connection table approximation.</a></li><br>
-
-<li><a name="Vol_IMGT"><b>Vol_IMGT:</b> Volume value of amino acids, as reported by IMGT itself.</a></li><br>
-
-<li><a name="VSA"><b>VSA:</b> Van der Waals surface area. A polyhedral representation is used for each atom in
-calculating the surface area.</a></li><br>
-
-<li><a name="Weight"><b>Weight:</b> Molecular weight (including implicit hydrogens) in atomic mass units with atomic
-weights taken from CRC Handbook of Chemistry and Physics. CRC Press (1994).</a></li>
-
-</ul></font>
-<center><b><font face="Ubuntu Mono, Courier New">Reference:</font></b><br>
-<table><tr><td align='center' bgcolor='#F7F8E0'><font face="Ubuntu Mono, Courier New" size='-1'>
-Molecular Operating Environment (MOE), 2012.10;<br>
-Chemical Computing Group Inc.,<br>
-1010 Sherbooke St. West, Suite #910,<br>
-Montreal, QC, Canada, H3A 2R7, <b>2012</b>.</font></td></tr></table></center>
-ENDHTML
+        codebook( \@properties );
     }
     elsif ($advanced == 1
         && $cgi->param('proceed') )    # Advanced interface, show results. #
@@ -349,6 +295,8 @@ ENDHTML
         create_results_table( \@properties, $sequence );
         print '</center><br><font face="Ubuntu Mono, Courier New">';
 
+        # Properties Codebook. #
+        codebook( \@properties );
     }
     elsif ( $advanced == 1 )    # Advanced interface, specify parameters. #
     {
@@ -359,6 +307,8 @@ ENDHTML
 This is the advanced interface of the tool. To go back to the simple interface, click
 <a href='http://imgt.org/pc_descriptor/properties.pl?sequence=$sequence' style='text-decoration:none'>here</a>.
 <br>Otherwise, please select the physicochemical properties to compute for the input sequence.
+<br>To download the complete Properties Codebook, click
+<a href='http://tinyurl.com/pc-descriptor-codebook' style='text-decoration:none'>here</a>.
 </font>
 
 <form id = 'submit' method = 'post'
@@ -455,6 +405,48 @@ sub add_units
     return $property;
 }
 
+sub codebook
+{
+    my ($properties) = @_;
+
+    print << 'ENDHTML';
+</center><br><hr/><font face="Ubuntu Mono, Courier New">
+<b><u>Properties Codebook</u></b><br>
+<ul type="circle">
+ENDHTML
+
+    foreach my $element ( @{$properties} )
+    {
+        my $select_text = << 'END_SQL';
+Select Description from Descriptions where Code = ?;
+END_SQL
+        my $db_sel = $dbh->prepare($select_text);
+
+        # Bind variable to avoid sql injection attack. #
+        $db_sel->execute($element);
+        my $result = $db_sel->fetchall_arrayref;
+
+        if ( $result->[0]->[0] )
+        {
+            $element = string_reformat( $element, 'from_sql' );
+            my $description = string_reformat( $result->[0]->[0], 'from_sql' );
+            print << "ENDHTML";
+<li><a name="$element"><b>$element:</b> $description</a></li><br>
+ENDHTML
+        }
+    }
+    print << 'ENDHTML';
+</ul></font>
+<center><b><font face="Ubuntu Mono, Courier New">Reference:</font></b><br>
+<table><tr><td align='center' bgcolor='#F7F8E0'><font face="Ubuntu Mono, Courier New" size='-1'>
+Molecular Operating Environment (MOE), 2012.10;<br>
+Chemical Computing Group Inc.,<br>
+1010 Sherbooke St. West, Suite #910,<br>
+Montreal, QC, Canada, H3A 2R7, <b>2012</b>.</font></td></tr></table></center>
+ENDHTML
+    return 0;
+}
+
 # Just what the function name reads. #
 sub create_results_table
 {
@@ -543,9 +535,12 @@ ENDSQL
     my @tables;
     while ( $result->[$iterator]->[0] )
     {
-
-        # Perform aesthetic conversions and store table names. #
-        push @tables, string_reformat( $result->[$iterator]->[0], 'from_sql' );
+        if ( $result->[$iterator]->[0] ne 'Descriptions' )
+        {
+            # Perform aesthetic conversions and store table names. #
+            push @tables,
+              string_reformat( $result->[$iterator]->[0], 'from_sql' );
+        }
         $iterator++;
     }
 
@@ -563,6 +558,8 @@ sub string_reformat
         $string =~ s/_pos_?/+/g;
         $string =~ s/_neg_?/-/g;
         $string =~ s/_o_w_?/(o\/w)/g;
+        $string =~ s/\^(\d+)(\W)/<sup>$1<\/sup>$2/g;
+        $string =~ s/\[(.+?)\]/<b>[<\/b><i>$1<\/i><b>]<\/b>/g;
     }
     elsif ( $mode eq 'for_sql' )    # For an SQL statement. #
     {
