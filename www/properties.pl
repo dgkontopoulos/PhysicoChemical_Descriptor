@@ -319,11 +319,10 @@ action=http://imgt.org/pc_descriptor/properties.pl?sequence=$sequence&advanced=1
 <input type=hidden name='proceed' value='1'>
 ENDHTML
 
+        my ( $tables, $categories, $colors ) = get_available_properties();
+
         # Get and list the available properties. #
         say '<center><table cellspacing = "5"><tr>';
-
-        my $tables = get_available_properties();
-
         for ( 0 .. @{$tables} - 1 )
         {
             if ( $_ % 8 == 0 )
@@ -333,7 +332,8 @@ ENDHTML
 
             # Create checkbuttons. #
             print << "ENDHTML";
-<td><font face='Ubuntu Mono, Courier New' size='2'>
+<td><font face='Ubuntu Mono, Courier New' size='2' 
+color = '$colors->{$categories->{$tables->[$_]}}'>
 <input type=checkbox name='$tables->[$_]' value='1'>$tables->[$_]
 </font></td><td></td>
 ENDHTML
@@ -345,6 +345,31 @@ ENDHTML
 <input id='submit' type='submit' value=' Submit '></form></center><br>
 <font face="Ubuntu Mono, Courier New">
 ENDHTML
+
+        say << 'ENDHTML';
+<center>
+<table frame = 'box'><tr bgcolor='#FAFAD2'><td></td>
+<td><center><b>LEGEND</b></td><td></td></tr><tr>
+ENDHTML
+
+        # Legend table. #
+        my $legend_counter = 0;
+        foreach ( keys %{$colors} )
+        {
+            if ( $legend_counter == 3 )
+            {
+                say '</tr><tr>';
+                $legend_counter = 0;
+            }
+            say << "ENDHTML";
+<td><center>
+<font face='Ubuntu Mono, Courier New' size='2' 
+color = '$colors->{$_}'>$_</font>
+</center></td>
+ENDHTML
+            $legend_counter++;
+        }
+        say '</center></td></tr></table></center></br>';
     }
 }
 else    # Handle any non-protein sequences. #
@@ -527,25 +552,36 @@ sub get_available_properties
 
     # Connect to the database and get a list of tables. #
     my $sql = << 'ENDSQL';
-Select name from sqlite_master where type = "table"
+Select name, Category from sqlite_master, Descriptions where type = "table" and name = Code
 ENDSQL
     my $result = $dbh->selectall_arrayref($sql);
 
     my $iterator = 0;
-    my @tables;
+    my ( @tables, %categories, %colors );
+    my @colors = (
+        '#FF0000', '#1E90FF', '#FF8C00', '#8B008B', '#167D77', '#DB7093',
+        '#5C4306', '#191919', '#006400', '#0000FF', '#7FFF00',
+    );
     while ( $result->[$iterator]->[0] )
     {
-        if ( $result->[$iterator]->[0] ne 'Descriptions' )
+        # Perform aesthetic conversions and store table names. #
+        my $property = string_reformat( $result->[$iterator]->[0], 'from_sql' );
+        push @tables, $property;
+
+        my $category = $result->[$iterator]->[1];
+        $categories{$property} = $category;
+
+        unless ( defined $colors{$category} )
         {
-            # Perform aesthetic conversions and store table names. #
-            push @tables,
-              string_reformat( $result->[$iterator]->[0], 'from_sql' );
+            $colors{$category} = $colors[0];
+            undef $colors[0];
+            @colors = grep { defined } @colors;
         }
         $iterator++;
     }
 
     @tables = sort { lc $a cmp lc $b } @tables;
-    return \@tables;
+    return \@tables, \%categories, \%colors;
 }
 
 # Remove illegal characters and vice versa. #
