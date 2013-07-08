@@ -107,7 +107,7 @@ if ( $sequence =~ /^\s*$/ )    # Reject empty sequences. #
 </td>
 
 <td align=right valign=top width="30%">
-<a href="http://www.imgt.org"><img src="http://imgt.org/IMGT_vquest/share/textes/images/logoIMGT.png" alt="IMGT"></a>
+<a href="http://www.imgt.org"><img style="border:none;" src="http://imgt.org/IMGT_vquest/share/textes/images/logoIMGT.png" alt="IMGT"></a>
 </td>
 </tr>
 </table>
@@ -135,7 +135,7 @@ elsif ( $sequence =~ /^[A|R|N|D|C|E|Q|G|H|I|L|K|M|F|P|S|T|W|Y|V]+$/i )
 </font></td>
 
 <td align=right valign=top width="30%">
-<a href="http://www.imgt.org"><img src="http://imgt.org/IMGT_vquest/share/textes/images/logoIMGT.png" alt="IMGT"></a>
+<a href="http://www.imgt.org"><img style="border:none;" src="http://imgt.org/IMGT_vquest/share/textes/images/logoIMGT.png" alt="IMGT"></a>
 </td>
 </tr>
 </table>
@@ -177,7 +177,7 @@ END_HEADER
 </td>
 
 <td align=right valign=top width='30%'>
-<a href='http://www.imgt.org'><img src='http://imgt.org/IMGT_vquest/share/textes/images/logoIMGT.png' alt='IMGT'></a>
+<a href='http://www.imgt.org'><img style="border:none;" src='http://imgt.org/IMGT_vquest/share/textes/images/logoIMGT.png' alt='IMGT'></a>
 </td>
 </tr>
 </table>
@@ -332,7 +332,7 @@ ENDHTML
 
             # Create checkbuttons. #
             print << "ENDHTML";
-<td><font face='Ubuntu Mono, Courier New' size='2' 
+<td align="left"><font face='Ubuntu Mono, Courier New' size='2'
 color = '$colors->{$categories->{$tables->[$_]}}'>
 <input type=checkbox name='$tables->[$_]' value='1'>$tables->[$_]
 </font></td><td></td>
@@ -389,7 +389,7 @@ else    # Handle any non-protein sequences. #
 </font></td>
 
 <td align=right valign=top width="30%">
-<a href="http://www.imgt.org"><img src="http://imgt.org/IMGT_vquest/share/textes/images/logoIMGT.png" alt="IMGT"></a>
+<a href="http://www.imgt.org"><img style="border:none;" src="http://imgt.org/IMGT_vquest/share/textes/images/logoIMGT.png" alt="IMGT"></a>
 </td>
 </tr>
 </table>
