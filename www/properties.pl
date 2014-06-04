@@ -308,7 +308,7 @@ This is the advanced interface of the tool. To go back to the simple interface, 
 <a href='http://imgt.org/pc_descriptor/properties.pl?sequence=$sequence' style='text-decoration:none'>here</a>.
 <br>Otherwise, please select the physicochemical properties to compute for the input sequence.
 <br>To download the complete Properties Codebook, click
-<a href='http://tinyurl.com/pc-descriptor-codebook' style='text-decoration:none'>here</a>.
+<a href='https://github.com/dgkontopoulos/PhysicoChemical_Descriptor/raw/master/codebook.pdf' style='text-decoration:none'>here</a>.
 </font>
 
 <form id = 'submit' method = 'post'
